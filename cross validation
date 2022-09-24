@@ -1,0 +1,198 @@
+#多项式回归
+m = 100
+x = 6*np.random.rand(m,1)-3 #使得x的范围在-3到3之间
+y = 0.5*x**2+x+np.random.randn(m,1)
+# polynomial degree=2时,[1,a,ab,a^2,b^2]
+from sklearn.preprocessing import PolynomialFeatures
+poly_features = PolynomialFeatures(degree=2,include_bias=False)
+x_poly = poly_features.fit_transform(x)
+from sklearnlinear_model import LinearRegression
+lin_reg = LinearRegression()
+lin_reg.fit(x_poly,y)
+print(lin_reg.coef_) #权重
+print(lin_reg.intercept_)#偏置
+x_new = np.linspace(-3,3,100).reshape(100,1)
+x_new_poly = poly_features.transform(x_new) #前面已经.fit过，此处直接按照与前面相同的规则进行变换
+y_new = lin_reg.predict(x_new_poly)
+plt.plot(x_new,y_new,'--',label='prediction')
+plt.axis([-3,3,-5,10])
+plt.legend()
+plt.show()
+#不同的degree值曲线的拟合情况对比
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+for style,width,degree in (('g-',1,10),('b--',2,2),('r-+',3,1)):
+  poly_features = PolynomialFeatures(degree=degree,include_bias=False)
+  std = StandardScaler()
+  lin_reg = LinearRegression()
+  polynomial_reg = Pipeline([('poly_features',poly_features),('StandardScaler',std),('lin_reg',lin_reg)])
+  polynomial_reg.fit(x,y)
+  y_new_2 =  polynomial_reg.predict(x_new)
+  
+  
+  from scipy.optimize import minimize
+  from utils.features import prepare_for_training
+  from utils.hypothesis import sigmoid
+  # logisticregression
+  class LogisticRegression:
+    def _ init_(self,data,labels,polynomial_degree=0,sinusoid_degree=0,nomalize_data=)
+      （data_processed,features_mean,features_deviation） = prepare_for_training(data,polynomial_degree,sinusoid_degree)
+       self.data  = data_processed
+       self.labels = labels
+       self.unique_labels = np.unique(labels) # unique函数去除其中重复的元素，并按元素由大到小返回一个新的无元素重复的元组或者列表
+       self.features_mean = features_mean
+       self.polynomial_degree = polynomial_degree
+       self.sinusoid_degree = sinusoid_degree
+       self.nomalize_data = nomalize_data
+       num_features = self.data.shape[1]
+       num_unique_labels = np.unique(labels).shape[0]
+       self.theta = np.zeros((num_unique_labels,num_features))
+       
+     def train(self,max_iterations=100):
+        cost_histories = []
+        num_features = self.data.shape[1]
+        for label_index,unique_label in enumerate(self.unique_labels): #enumerate枚举
+            current_initial_theta = np.copy(self.theta[label_index].reshape(num_features,1))
+            current_labels = (self.labels == unique_labels).astype(float) #转换为二分类（0，1）问题
+            (current_theta,cost_history) = LogisticRegression.gradient_descent(self.data,current_labels,current_initial_theta,max_iterations)
+            self.theta[label_index] = current_theta.T
+            cost_histories.append(cost_history)
+        return self.theta,cost_histories
+     
+     @staticmethod      
+     def gradient_descent(data,labels,current_initial_theta,max_iterations):
+         cost_history = []
+         num_features = data.shape[1]
+        
+        result=minimize(
+            #要优化的目标
+             lambda current_theta:LogisticRegression.cost_function(data,labels,current_initial_theta.reshape(num_feature,1))，
+             current_initial_theta,
+             method = 'CG'，     #选择优化策略，CG策略综合的考虑了梯度下降和牛顿梯度下降
+             #梯度下降实际计算公式
+             jac = lambda current_theta:LogisticRegression.gradient_step(data,labels,current_initial_theta.reshape(num_feature,1)),
+             #记录结果
+             callback = lambda current_theta:cost_history.append(LogisticRegression.cost_function(data,labels,current_theta.reshape(num_feature,1))，
+             #迭代次数
+             options = {'maxiter':max_iterations}
+              )
+         if not result.success:
+              raise ArithmeticError('Can not minimize cost function'+result.message)
+              optimized_theta = result.x.reshape(num_feature,1)
+              return optimized_theta
+     
+     
+     def gradient_step(data,labels,theta):
+         num_examples = labels.shape[0]
+         predictions = LogisticRegression.hypothesis(data,theta)
+         label_diff = predictions - labels
+         gradients = (1/num_examples)*np.dot(data.T,label_diff)
+         return gradients.T.flatten()
+     
+     
+     
+     
+     
+     @staticmethod
+     def cost_function(data,labels,theta):
+         num_examples = data.shape[0]
+         predictions = LogisticRegression.hypothesis(data,theta)
+         y_is_set_cost = np.dot(labels[labels == 1].T,np.log(predictions[labels == 1])) #在分类任务中，一般用交叉熵计算损失函数
+         y_is_not_set_cost = np.dot(1-labels[labels == 0].T,np.log(1-predictions[labels == 0]))
+         cost = (-1/num_examples)*(y_is_set_cost + y_is_not_set_cost)
+         return cost
+      
+      
+      
+     @staticmethod
+     def hypothesis(data,theta):
+         predictions = sigmoid(np.dot(data,theta))
+         return predictions
+  
+  
+     def predict(self,data):
+         num_examples = data.shape[0]
+         data_processed = prepare_for_training(data,self)
+         prob = LogisticRegression.hypothesis(data_processed,self.theta.T)
+         max_prob_index = np.argmax(prob,axis=1) #找出概率最大对应的索引
+         class_prediction = np.empty(max_prob_index.shape,dtype=object)
+         for index,label in enumerate(self.unique_labels):
+             class_prediction[max_prob_index == index] = label
+          return class_prediction.reshape((num_examples,1))
+         
+  
+  
+ #实例，鸢尾花150个样本，2个特征，三分类任务
+ import numpy as np
+ import pandas as pd
+ import matplotlib as plt
+ from logistic_regression import LogisticRegression
+ data = pd.read_csv('../data/iris.csv')
+ iris_types = ['SETOSA','VERSICOLOR','VERGINICA']
+ x_axis = 'petal_length'
+ y_axis = 'petal_width'
+ for iris_type in iris_types:
+     plt.scatter(data[x_axis][data['class']==iris_type],
+     data[y_axis][data['class']==iris_type],
+     label = iris_type
+     )
+ plt.show()
+ num_examples = data.shape[0]
+ x_train = data[[x_axis,y_axis]].values,reshape((num_examples,2))
+ y_train = data['class'].values.reshape((num_examples,1))
+ max_iterations = 1000
+ logistic_regression = LogisticRegression(x_train,y_train)
+ thetas,cost_histories = logistic_regression.train(max_iterations)
+ labels =  logistic_regression.unique_labels
+ plt.plot(range(len(cost_histories[0])),cost_histories[0],label = labels[0]) #len(cost_histories)是迭代的次数
+ plt.plot(range(len(cost_histories[1])),cost_histories[1],label = labels[1])
+ plt.plot(range(len(cost_histories[2])),cost_histories[2],label = labels[2])
+ plt.show()
+ y_train_predictions = logistic_regression.predict(x_train)
+ precision = np.sum(y_train_predictions == y_train)/y_train.shape[0]*100
+ print ('precision:',precision)
+ 
+ x_min = np.min(x_train[:,0])
+ x_max = np.max(x_train[:,0])
+ y_min = np.min(y_train[:,1])
+ y_max = np.max(y_train[:,1])
+ 
+ samples = 150
+ X = np.linspace(x_min,x_max,samples)
+ Y = np.linspace(y_min,y_max,samples)
+ 
+ Z_SETOSA = np.zeros((samples,samples))
+ Z_VERSICOLOR = np.zeros((samples,samples))
+ Z_VIRGINICA = np.zeros((samples,samples))
+ 
+ for x_index,x in enumerate(X):
+     for y_index,y in enumerate(Y):
+         data = np.array([[x,y]])
+         prediction = logistic_regression.predict(data)[0][0]
+         if prediction == 'SETOSA':
+            Z_SETOSA[x_index][y_index] = 1
+         elif prediction == 'VERSICOLOR'
+            Z_VERSICOLOR[x_index][y_index] = 1
+         elif prediction == 'VIRGINICA'
+            Z_VIRGINICA[x_index][y_index] = 1
+            
+ 
+      
+            
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
