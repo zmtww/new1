@@ -1,0 +1,20 @@
+#鸢尾花
+import numpy as np
+import matploylib
+# datasets中有内置数据集
+from sklearn import datasets
+from sklearn.linear_model import LogisticRegression
+iris = datasets.load_iris()
+X = iris['data'][:,3:] # 只拿出其中的一个特征
+y = (iris['target']==2).astype(np.int) #原始数据集有三类，此处转化为二分类
+log_res = LogisticRegression()
+log_res.fit(X,y)
+X_new = np.linspace(0,3,1000).reshape(-1,1) #构造成一维的
+y_proba = log_res.predict_proba(X_new) #得到概率值，而predict直接帮你判断类别
+plt.plot(X_new,y_proba[:,1],'g-',label = 'Iris-Virginica')
+plt.plot(X_new,y_proba[:,0],'g-',label = 'Not Iris-Virginica')
+
+
+#多分类（softmax）
+softmax_reg = LogisticRegression(multi_class = 'multinomial',solver='lbfgs')
+softmax_reg.fit(X,y)
